@@ -22,6 +22,11 @@ module.exports = function retrieveBasket () {
           const user = security.authenticatedUsers.from(req)
           return user && id && id !== 'undefined' && id !== 'null' && id !== 'NaN' && user.bid && user.bid != id // eslint-disable-line eqeqeq
         })
+
+        if (!basket || !isBasketOwnedByUser(req, basket)) {
+          return res.status(403).json({ message: 'Forbidden' });
+        }
+
         if (((basket?.Products) != null) && basket.Products.length > 0) {
           for (let i = 0; i < basket.Products.length; i++) {
             basket.Products[i].name = req.__(basket.Products[i].name)
@@ -32,5 +37,10 @@ module.exports = function retrieveBasket () {
       }).catch((error: Error) => {
         next(error)
       })
+  }
+
+  function isBasketOwnedByUser(req: Request, basket: BasketModel | null): boolean {
+    const user = security.authenticatedUsers.from(req);
+    return user && basket && user.bid && user.bid === basket.UserId;
   }
 }
