@@ -24,13 +24,20 @@ module.exports = function servePublicFiles () {
   }
 
   function verify (file: string, res: Response, next: NextFunction) {
+    const fullPath = path.resolve('ftp/', file);
     if (file && (endsWithAllowlistedFileType(file) || (file === 'incident-support.kdbx'))) {
       file = security.cutOffPoisonNullByte(file)
 
       challengeUtils.solveIf(challenges.directoryListingChallenge, () => { return file.toLowerCase() === 'acquisitions.md' })
       verifySuccessfulPoisonNullByteExploit(file)
 
-      res.sendFile(path.resolve('ftp/', file))
+      if (endsWithAllowlistedFileType(fullPath)) {
+        res.sendFile(fullPath);
+      } else {
+        res.status(403);
+        throw new Error('File extension is not allowed!');
+      }
+      
     } else {
       res.status(403)
       next(new Error('Only .md and .pdf files are allowed!'))
@@ -49,7 +56,8 @@ module.exports = function servePublicFiles () {
     })
   }
 
-  function endsWithAllowlistedFileType (param: string) {
-    return utils.endsWith(param, '.md') || utils.endsWith(param, '.pdf')
+  function endsWithAllowlistedFileType (filePath: string) {
+    const allowedExtensions = ['.md', '.pdf'];
+    return allowedExtensions.some(ext => filePath.toLowerCase().endsWith(ext));
   }
 }
